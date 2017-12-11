@@ -1,11 +1,14 @@
 import itertools
 from os import listdir
 from os.path import join
-from keras.models import Sequential
+from keras.models import Model
+from keras.layers import Input, Dense
+from keras.preprocessing.image import ImageDataGenerator
 from PIL import Image
 import unet
 import random
 import numpy as np
+import keras
 
 
 class DatasetGenerator:
@@ -17,32 +20,44 @@ class DatasetGenerator:
         ))
         random.shuffle(paths)
 
-        self.data_generator = DatasetGenerator.__data_generator(paths)
-
-        self.answer_generator = DatasetGenerator.__answer_generator(paths)
+        self.generator = DatasetGenerator.__generator(paths)
 
     @staticmethod
-    def __data_generator(data):
+    def __generator(data):
         while data:
             image = Image.open(data[-1])
             image = image.convert('RGB')
-            y_train = list(map(lambda x: np.array(list(map(lambda e: e / 255, x))),
+            x_train = list(map(lambda x: np.array(list(map(lambda e: e / 255, x))),
                                image.getdata()))
-            yield np.array(y_train)
-            data.pop()
 
-    @staticmethod
-    def __answer_generator(data):
-        while data:
             index = int(data[-1].split("/")[1])
             y_train = [0] * 5
             y_train[index] = 1
-            yield np.array(y_train)
+            yield (np.array([np.array(x_train)]), 
+                   np.array([np.array([np.array(y_train)])]))
+            data.pop()
 
 
 if __name__ == "__main__":
     datasetGenerator = DatasetGenerator()
-    x_train = datasetGenerator.data_generator
-    y_train = datasetGenerator.answer_generator
+    data = datasetGenerator.generator
+    train_data = data[:-100]
+    test_data = data[-100:]
+    print(next(data)[0].shape)
 
-    model = unet.unet4(3, 280, 280)
+    inp = Input(shape=(280 * 280, 3))
+    hidden_1 = Dense(512, activation='relu')(inp)
+    hidden_2 = Dense(512, activation='relu')(hidden_1)
+    out = Dense(5, activation='softmax')(hidden_2)
+
+    model = Model(inputs=inp, outputs=out)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    model.fit_generator(train_data, verbose=1, steps_per_epoch=10, epochs=20)
+
+    # x_test = datasetGenerator.data_generator
+    # y_test = datasetGenerator.answer_generator
+    model.evaluate_generator(test_data)
+
+    # model = keras.applications.resnet50.ResNet50(input_shape=(224, 224, 3))
+    # model.fit_generator(x_train, y_train)
