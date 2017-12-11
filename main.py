@@ -41,9 +41,6 @@ class DatasetGenerator:
 if __name__ == "__main__":
     datasetGenerator = DatasetGenerator()
     data = datasetGenerator.generator
-    train_data = data[:-100]
-    test_data = data[-100:]
-    print(next(data)[0].shape)
 
     inp = Input(shape=(280 * 280, 3))
     hidden_1 = Dense(512, activation='relu')(inp)
@@ -53,11 +50,11 @@ if __name__ == "__main__":
     model = Model(inputs=inp, outputs=out)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-    model.fit_generator(train_data, verbose=1, steps_per_epoch=10, epochs=20)
+    model.fit_generator(data, verbose=1, steps_per_epoch=10, epochs=20)
 
     # x_test = datasetGenerator.data_generator
     # y_test = datasetGenerator.answer_generator
-    model.evaluate_generator(test_data)
+    # model.evaluate_generator(test_data)
 
     # model = keras.applications.resnet50.ResNet50(input_shape=(224, 224, 3))
     # model.fit_generator(x_train, y_train)
